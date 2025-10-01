@@ -123,8 +123,6 @@ class DeliveryHub:
                 # Start background task for simulated processing
                 self.socketio.start_background_task(self.process_package, robot_id, package_id)
 
-                self.update_modbus_status_registers()
-
                 self.emit_hub_event({
                     "event": "accepted",
                     "robot_id": robot_id,
@@ -139,8 +137,6 @@ class DeliveryHub:
             if self.slots_used == self.total_slots:
                 logging.info(f"No free slots for package {package_id} from Robot {robot_id}. DENIED (2).")
                 
-                self.update_modbus_status_registers()
-                
                 self.emit_hub_event({
                     "event": "full",
                     "robot_id": robot_id,
@@ -153,8 +149,6 @@ class DeliveryHub:
                 return 2 # Modbus Status: NO_FREE_SLOTS/Denied
             else:
                 logging.info(f"No free slots for package {package_id} from Robot {robot_id}. DENIED (2).")
-                
-                self.update_modbus_status_registers()
                 
                 self.emit_hub_event({
                     "event": "full",
@@ -218,11 +212,13 @@ class DeliveryHub:
         """Send real-time events to UI (used for ACCEPTED, FULL, SLOT_FREED)."""
         try:
             self.socketio.emit("hub_event", payload)
+            self.update_modbus_status_registers()
         except Exception as e:
             logging.debug(f"emit_hub_event failed: {e}")
 
     def update_modbus_status_registers(self):
         """Write current slots_used and total_slots to Modbus HRegs 0 and 1."""
+        logging.debug(f"Modbus status registers update received")
         try:
             if self.context is not None:
                 # Write slots_used to HReg 0, total_slots to HReg 1
