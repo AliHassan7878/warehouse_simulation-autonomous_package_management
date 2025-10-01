@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  delivery_hub:
+    build: ./app
+    container_name: delivery_hub
+    ports:
+      - "5500:5500"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - FLASK_ENV=development

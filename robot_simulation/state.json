@@ -1,0 +1,31 @@
+{
+  "packages": 4,
+  "robots": [
+    {
+      "id": 1,
+      "status": "idle",
+      "path": null,
+      "progress": 0
+    },
+    {
+      "id": 2,
+      "status": "idle",
+      "path": null,
+      "progress": 0
+    },
+    {
+      "id": 3,
+      "status": "idle",
+      "path": null,
+      "progress": 0
+    },
+    {
+      "id": 4,
+      "status": "idle",
+      "path": null,
+      "progress": 0
+    }
+  ],
+  "deliver_queue_capacity": 8,
+  "deliver_queue_len": 2
+}

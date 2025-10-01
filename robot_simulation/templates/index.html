@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Robot Delivery Simulation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h2>Robot Delivery Simulation — Point A → Point B</h2>
+  <div class="container">
+    <div class="col">
+      <div class="panel">
+        <div class="toprow">
+          <span class="point-label">Point A (Pickup)</span>
+          <span class="point-label">Point B (Delivery Hub)</span>
+        </div>
+        <div class="paths" id="paths"></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="panel">
+        <h3>Packages</h3>
+        <div class="info">Total packages: <strong id="packages">0</strong></div>
+        <div class="controls">
+          <button id="btnAddPackage">+ Add package</button>
+          <button id="btnRemovePackage">- Remove package</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Robots (Parked near Point A)</h3>
+        <div class="robot-pool" id="robot_pool"></div>
+        <div class="controls" style="margin-top:10px;">
+          <button id="btnAddRobot">+ Add robot</button>
+          <button id="btnRemoveRobot">- Remove robot</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Live Robot Status</h3>
+        <div id="robot_status_area"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const PATH_LENGTHS = {{ path_lengths|tojson }};
+</script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

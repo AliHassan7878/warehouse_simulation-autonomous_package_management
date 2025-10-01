@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  robot-simulator:
+    # Build the image from the Dockerfile in the current directory
+    build: .
+    # Map port 6000 on the host machine to port 5000 in the container
+    ports:
+      - "5000:5000"
+    # Mount the current directory into the container. This is useful for development 
+    # as changes to app.py will be immediately reflected inside the container 
+    # (though a restart is usually needed for Python file changes).
+    volumes:
+      - .:/usr/src/app
+    # Set the restart policy
+    restart: always
+
+    networks:
+      - sim_net # Explicitly attach to sim_netnetworks:
+
+networks:
+  sim_net:
+    driver: bridge # Define the custom network

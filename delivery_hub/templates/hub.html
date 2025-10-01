@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Delivery Hub</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
+    h2 { color: #333; }
+    .panel { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .status { margin: 5px 0; font-size: 16px; }
+    #live_logs { max-height: 250px; overflow-y: auto; font-family: monospace; background: #222; color: #eee; padding: 10px; border-radius: 5px; }
+    .log-accepted { color: #4caf50; }
+    .log-warning { color: #ff9800; }
+    .log-info { color: #ccc; }
+  </style>
+</head>
+<body>
+  <h2>Delivery Hub Dashboard</h2>
+
+  <div class="panel">
+    <h3>Slot Status</h3>
+    <div class="status">Slots used: <span id="slots_used">0</span> / <span id="total_slots">8</span></div>
+  </div>
+
+  <div class="panel">
+    <h3>Total Packages Processed</h3>
+    <div class="status" id="processed_count">0</div>
+  </div>
+
+  <div class="panel">
+    <h3>Live Logs</h3>
+    <div id="live_logs"></div>
+  </div>
+
+  <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+
+    const slotsUsedEl = document.getElementById('slots_used');
+    const totalSlotsEl = document.getElementById('total_slots');
+    const processedCountEl = document.getElementById('processed_count');
+    const liveLogsEl = document.getElementById('live_logs');
+
+    function log(msg, type="info") {
+      const p = document.createElement('div');
+      p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      p.className = type === "accepted" ? "log-accepted" : type === "warning" ? "log-warning" : "log-info";
+      liveLogsEl.appendChild(p);
+      liveLogsEl.scrollTop = liveLogsEl.scrollHeight;
+    }
+
+    // Hub updates: slots used & packages processed
+    socket.on("hub_update", data => {
+      slotsUsedEl.innerText = data.slots_used;
+      totalSlotsEl.innerText = data.total_slots;
+      processedCountEl.innerText = data.processed_count;
+      log(`Hub update: ${data.slots_used}/${data.total_slots} slots used, ${data.processed_count} packages processed`);
+    });
+
+    // No free slots broadcast
+    socket.on("no_free_slots", data => {
+      log(`No free slots for package ${data.packageId}`, "warning");
+    });
+
+    // Individual robot delivery accepted
+    socket.onAny((event, data) => {
+      if(event.startsWith("delivery_accepted_")){
+        log(`Package ${data.packageId} accepted by hub`, "accepted");
+      }
+    });
+
+    // Connection status
+    socket.on("connect", () => log("Connected to Delivery Hub"));
+    socket.on("disconnect", () => log("Disconnected from Delivery Hub", "warning"));
+  </script>
+</body>
+</html>

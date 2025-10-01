@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  robot_sim:
+    build:
+      context: ./robot_simulation
+      dockerfile: Dockerfile
+    container_name: robot_app
+    ports:
+      - "5000:5000"  # Flask UI
+    depends_on:
+      - communication_hub
+    environment:
+      - COMM_HUB_HOST=communication_hub
+      - COMM_HUB_PORT=50051   # gRPC port exposed by Rust hub
+    networks:
+      - robotnet
+
+  delivery_hub:
+    build:
+      context: ./delivery_hub
+      dockerfile: Dockerfile
+    container_name: delivery_hub
+    ports:
+      - "5500:5500"  # Flask UI
+      - "502:502"    # Modbus TCP port
+    
+    volumes:
+      - ./delivery_hub/data:/app/data
+    networks:
+      - robotnet
+
+  communication_hub:
+    build:
+      context: ./communication_hub
+      dockerfile: Dockerfile
+    container_name: communication_hub
+    ports:
+      - "50051:50051"  # gRPC port for Robot Simulation
+    depends_on:
+      - delivery_hub
+    networks:
+      - robotnet
+
+networks:
+  robotnet:
+    driver: bridge
