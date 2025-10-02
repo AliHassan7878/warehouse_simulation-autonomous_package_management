@@ -45,13 +45,22 @@ class LiveLogHandler(logging.Handler):
         except Exception:
             pass
 
+# --- Logging setup ---
+# ... (LiveLogHandler class definition) ...
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(threadName)s - %(message)s")
+
+# Console Handler
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
-logger.addHandler(LiveLogHandler())
+
+# 🚀 SocketIO/Live Log Handler (FIXED) 🚀
+live_log_handler = LiveLogHandler()
+live_log_handler.setFormatter(formatter) # Sets the formatter
+logger.addHandler(live_log_handler)
 
 # --- Delivery Hub ---
 class DeliveryHub:
