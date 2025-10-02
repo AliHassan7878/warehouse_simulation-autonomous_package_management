@@ -108,10 +108,6 @@ class DeliveryHub:
         2: Full (denied)
         """
         with self.lock:
-            if package_id in self.processed_package_ids:
-                logging.info(f"Package {package_id} already processed, returning ACCEPTED (1).")
-                return 1 # Treat already processed as success for robot state
-
             if self.slots_used < self.total_slots:
                 self.slots_used += 1
 
@@ -147,19 +143,6 @@ class DeliveryHub:
                 # Emit slot status (will be NO_FREE_SLOTS)
                 self.emit_slot_status() 
                 return 2 # Modbus Status: NO_FREE_SLOTS/Denied
-            else:
-                logging.info(f"No free slots for package {package_id} from Robot {robot_id}. DENIED (2).")
-                
-                self.emit_hub_event({
-                    "event": "full",
-                    "robot_id": robot_id,
-                    "package_id": package_id,
-                    "slots_used": self.slots_used,
-                    "total_slots": self.total_slots,
-                })
-                # Emit slot status (Slot Available)
-                self.emit_slot_status() 
-                return 3 # Modbus Status: Slots Available
 
     def process_package(self, robot_id, package_id):
         """Simulate actual package processing."""
@@ -304,7 +287,12 @@ def start_modbus_server():
                         context[0].setValues(3, RESPONSE_STATUS_ADDR, [modbus_status_code])
                         logging.info(f"Modbus Response: Wrote status {modbus_status_code} to Register 12.")
 
-                        seen_requests.add(req_key) 
+                        # 4. Handle Tracking based on Status
+                        if modbus_status_code == 1: # Accepted
+                            # Keep the key until processing completes (done in process_package)
+                            seen_requests.add(req_key) 
+                        elif modbus_status_code == 2: # Denied/Full
+                            pass 
                         
                 # 4. Clear Status Register (12) when the request registers are clear, 
                 # to reset the hub state for the next Modbus transaction.
