@@ -1,67 +1,104 @@
 const socket = io();
 
-// Get the element where logs will be displayed
-const slotsUsedEl = document.getElementById('slots_used');
-const totalSlotsEl = document.getElementById('total_slots');
-const processedCountEl = document.getElementById('processed_count');
-const liveLogsEl = document.getElementById('live_logs'); // Assuming this is the log container
+// UI Elements
+const slotsUsedEl = document.getElementById('slots_used_kpi');
+const totalSlotsEl = document.getElementById('total_slots_kpi');
+const processedCountEl = document.getElementById('processed_count_kpi');
+const liveLogsEl = document.getElementById('live_logs');
+const slotVisualEl = document.getElementById('slot-visual');
 
-function log(msg) {
-  const p = document.createElement('div');
-  p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  liveLogsEl.appendChild(p);
-  // Keep the log scrolled to the bottom
-  liveLogsEl.scrollTop = liveLogsEl.scrollHeight;
+// --- Visualization Functions (Simplified) ---
+
+function renderSlots(used, total) {
+    slotVisualEl.innerHTML = '';
+    for (let i = 0; i < total; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'slot ' + (i < used ? 'used' : 'free');
+        slotVisualEl.appendChild(slot);
+    }
 }
 
-// =======================================================
-// 🚀 FIX: Listener for logs sent from the Python backend 🚀
-// =======================================================
+// --- Logging Function ---
+
+function log(msg, type = "info") {
+    const p = document.createElement('div');
+    p.textContent = msg;
+
+    // Apply CSS classes based on log content
+    if (msg.includes("[ERROR]")) {
+        p.className = "log-warning";
+    } else if (msg.includes("[WARNING]")) {
+        p.className = "log-warning";
+    } else if (type === "accepted") {
+        p.className = "log-accepted";
+    } else {
+        p.className = "log-info";
+    }
+
+    liveLogsEl.appendChild(p);
+    liveLogsEl.scrollTop = liveLogsEl.scrollHeight;
+}
+
+
+// --- SocketIO Listeners ---
+
+// 1. Python Live Logs
 socket.on("live_log", (data) => {
-    // 'data' contains the dictionary sent by LiveLogHandler: {"msg": "..."}
-    log(data.msg); 
+    log(data.msg);
 });
 
-// =======================================================
-// Existing Listeners (Using log function for visibility)
-// =======================================================
+// 2. Initial Data Load
+socket.on("initial_data", (data) => {
+    log("Received initial state from server.", "info");
+    slotsUsedEl.innerText = data.slots_used;
+    totalSlotsEl.innerText = data.total_slots;
+    processedCountEl.innerText = data.processed_count;
+    renderSlots(data.slots_used, data.total_slots);
+});
 
-// Hub updates: slots used & packages processed
-socket.on("hub_update", (data) => {
-    log(`HUB UPDATE: ${data.event.toUpperCase()} | Slots: ${data.slots_used}/${data.total_slots}`); 
-    
-    document.getElementById("slots").innerText = 
-        `Slots Used: ${data.slots_used}/${data.total_slots}`;
+// 3. Hub updates (on package processing)
+socket.on("hub_update", data => {
+    // Update KPIs and visuals
+    slotsUsedEl.innerText = data.slots_used;
+    totalSlotsEl.innerText = data.total_slots;
+    processedCountEl.innerText = data.processed_count;
+    renderSlots(data.slots_used, data.total_slots);
 
+    // Update the processed list
     const list = document.getElementById("processed-list");
     if (list && data.event === "processed") {
         const item = document.createElement("li");
         item.textContent = `Package ${data.package.packageId} processed (${data.package.weight}kg, ${data.package.dimension})`;
-        list.appendChild(item);
+        list.prepend(item); // Prepend to show newest first
     }
 });
 
-
-// Slot Status Broadcast (Free or Full)
+// 4. Slot Status Broadcast
 socket.on("slot_status", (data) => {
-    log(`STATUS: ${data.status} (${data.slots_used}/${data.total_slots})`);
-    // Update individual elements if they exist
-    if (slotsUsedEl) slotsUsedEl.innerText = data.slots_used;
-    if (totalSlotsEl) totalSlotsEl.innerText = data.total_slots;
+    renderSlots(data.slots_used, data.total_slots);
+    slotsUsedEl.innerText = data.slots_used;
+    totalSlotsEl.innerText = data.total_slots;
 });
 
-// Hub Event (Accepted, Full, SLOT_FREED)
+// 5. Hub Event (Accepted, Full, SLOT_FREED)
 socket.on("hub_event", (data) => {
     if (data.event === "accepted") {
-        log(`🚚 Delivery ACCEPTED: Robot ${data.robot_id} for Package ${data.package_id}`);
+        log(`🚚 Delivery ACCEPTED: Robot ${data.robot_id} for Package ${data.package_id}`, "accepted");
+        renderSlots(data.slots_used, data.total_slots);
+        slotsUsedEl.innerText = data.slots_used;
     } else if (data.event === "full") {
-        log(`🛑 Delivery DENIED: Slots FULL for Package ${data.package_id}`);
+        log(`🛑 Delivery DENIED: Slots FULL for Package ${data.package_id}`, "warning");
     } else if (data.event === "SLOT_FREED") {
-        log(`✅ SLOT FREED after processing Package ${data.package_id}`);
+        log(`✅ SLOT FREED after processing Package ${data.package_id}`, "accepted");
+        renderSlots(data.slots_used, data.total_slots);
+        slotsUsedEl.innerText = data.slots_used;
     }
 });
 
-
-// Optional: show connection status
-socket.on("connect", () => log("📡 Connected to Delivery Hub"));
-socket.on("disconnect", () => log("❌ Disconnected from Delivery Hub"));
+// 6. Connection status
+socket.on("connect", () => {
+    log("📡 Connected to Delivery Hub");
+    // Request initial data immediately upon connection
+    socket.emit("request_initial_data");
+});
+socket.on("disconnect", () => log("❌ Disconnected from Delivery Hub", "warning"));

@@ -3,6 +3,4 @@ Flask-SocketIO
 eventlet
 pymodbus==2.5.3
 pyserial-asyncio
-grpcio
-grpcio-tools
 modbus-tk

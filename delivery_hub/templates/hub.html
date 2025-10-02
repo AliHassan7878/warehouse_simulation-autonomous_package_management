@@ -2,98 +2,65 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Delivery Hub</title>
+  <title>Delivery Hub Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
-    h2 { color: #333; }
-    .panel { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .status { margin: 5px 0; font-size: 16px; }
-    #live_logs { max-height: 250px; overflow-y: auto; font-family: monospace; background: #222; color: #eee; padding: 10px; border-radius: 5px; }
-    .log-accepted { color: #4caf50; }
-    .log-warning { color: #ff9800; }
-    .log-info { color: #ccc; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #e9f0f7; color: #333; }
+    .header { background: #34495e; color: white; padding: 20px 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+    h2 { margin: 0; font-weight: 300; }
+    .dashboard { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; padding: 20px 40px; }
+    .panel { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px; }
+    .kpi-card { text-align: center; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+    .kpi-value { font-size: 2.5em; font-weight: 600; color: #3498db; }
+    .kpi-label { font-size: 0.9em; color: #7f8c8d; }
+    
+    /* Slot Visualization */
+    #slot-visual { display: flex; justify-content: center; gap: 5px; margin-top: 15px; }
+    .slot { width: 40px; height: 40px; border-radius: 5px; background: #ecf0f1; border: 2px solid #bdc3c7; transition: all 0.3s; }
+    .slot.used { background: #e74c3c; border-color: #c0392b; }
+    .slot.free { background: #2ecc71; border-color: #27ae60; }
+
+    /* Log Panel */
+    #live_logs { max-height: 400px; overflow-y: auto; font-family: 'Consolas', 'Courier New', monospace; background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; font-size: 0.85em; }
+    #live_logs div { line-height: 1.4; border-bottom: 1px dotted rgba(255, 255, 255, 0.1); }
+    .log-accepted { color: #2ecc71; } /* Success/Accepted */
+    .log-warning { color: #f1c40f; }  /* Warning/Error */
+    .log-info { color: #bdc3c7; }     /* Default Info */
   </style>
-</head>
+  </head>
 <body>
-  <h2>Delivery Hub Dashboard</h2>
-
-  <div class="panel">
-    <h3>Slot Status</h3>
-    <div class="status">Slots used: <span id="slots_used">0</span> / <span id="total_slots">8</span></div>
+  <div class="header">
+    <h2>Delivery Hub Dashboard</h2>
   </div>
-
-  <div class="panel">
-    <h3>Total Packages Processed</h3>
-    <div class="status" id="processed_count">0</div>
-  </div>
-
-  <div class="panel">
-    <h3>Live Logs</h3>
-    <div id="live_logs"></div>
-  </div>
-
-    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-  <script>
-    const socket = io();
-
-    const slotsUsedEl = document.getElementById('slots_used');
-    const totalSlotsEl = document.getElementById('total_slots');
-    const processedCountEl = document.getElementById('processed_count');
-    const liveLogsEl = document.getElementById('live_logs');
-
-    function log(msg, type="info") {
-      const p = document.createElement('div');
-      // NOTE: We do NOT prepend the timestamp here because the Python log already has it!
-      p.textContent = msg; 
+  <div class="dashboard">
+    
+    <div class="panel">
+      <h3>Key Performance Indicators</h3>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-value"><span id="slots_used_kpi">0</span>/<span id="total_slots_kpi">0</span></div>
+          <div class="kpi-label">Current Slots Used</div>
+          <div id="slot-visual"></div> </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="processed_count_kpi">0</div>
+          <div class="kpi-label">Total Packages Processed</div>
+        </div>
+      </div>
       
-      // Attempt to intelligently apply CSS classes based on Python log level
-      // Assuming Python logs will contain [INFO], [WARNING], or [ERROR]
-      if (msg.includes("[ERROR]")) {
-          p.className = "log-warning"; // Use warning class for errors
-      } else if (msg.includes("[WARNING]")) {
-          p.className = "log-warning";
-      } else if (type === "accepted") {
-          p.className = "log-accepted";
-      } else {
-          p.className = "log-info";
-      }
-      
-      liveLogsEl.appendChild(p);
-      liveLogsEl.scrollTop = liveLogsEl.scrollHeight;
-    }
+      <h3>Processed Packages</h3>
+      <ul id="processed-list"></ul>
+    </div>
+    
+    <div>
+      <div class="panel">
+        <h3>Live Logs</h3>
+        <div id="live_logs"></div>
+      </div>
 
-    // =======================================================
-    // 🚀 FIX: Listener for Python Live Logs 🚀
-    // =======================================================
-    socket.on("live_log", (data) => {
-        // data.msg contains the full, formatted Python log string (with timestamp, level, thread)
-        log(data.msg); 
-    });
+      </div>
+  </div>
 
-    // Hub updates: slots used & packages processed
-    socket.on("hub_update", data => {
-      slotsUsedEl.innerText = data.slots_used;
-      totalSlotsEl.innerText = data.total_slots;
-      processedCountEl.innerText = data.processed_count;
-      // We still use this custom log for status updates, but it won't be mixed with Python logs
-      // log(`Hub update: ${data.slots_used}/${data.total_slots} slots used, ${data.processed_count} packages processed`);
-    });
-
-    // No free slots broadcast
-    socket.on("no_free_slots", data => {
-      log(`No free slots for package ${data.packageId}`, "warning");
-    });
-
-    // Individual robot delivery accepted
-    socket.onAny((event, data) => {
-      if(event.startsWith("delivery_accepted_")){
-        log(`Package ${data.packageId} accepted by hub`, "accepted");
-      }
-    });
-
-    // Connection status
-    socket.on("connect", () => log("Connected to Delivery Hub"));
-    socket.on("disconnect", () => log("Disconnected from Delivery Hub", "warning"));
-  </script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="/static/hub.js"></script>
 </body>
 </html>

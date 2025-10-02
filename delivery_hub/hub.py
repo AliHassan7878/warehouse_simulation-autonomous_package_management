@@ -34,7 +34,7 @@ if not os.path.isfile(PACKAGES_FILE):
 
 print(f"packages.json created at: {PACKAGES_FILE}")
 
-TOTAL_SLOTS = 1 # Total delivery slots in hub
+TOTAL_SLOTS = 4 # Total delivery slots in hub
 
 # --- Logging setup ---
 class LiveLogHandler(logging.Handler):
@@ -46,8 +46,8 @@ class LiveLogHandler(logging.Handler):
             pass
 
 # --- Logging setup ---
-# ... (LiveLogHandler class definition) ...
 
+# ... (LiveLogHandler class definition) ...
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(threadName)s - %(message)s")
@@ -57,7 +57,7 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-# 🚀 SocketIO/Live Log Handler (FIXED) 🚀
+# SocketIO/Live Log Handler
 live_log_handler = LiveLogHandler()
 live_log_handler.setFormatter(formatter) # Sets the formatter
 logger.addHandler(live_log_handler)
@@ -76,6 +76,15 @@ class DeliveryHub:
         logging.info("Delivery Hub initialized with %d slots", total_slots)
         self.emit_slot_status() # Emit initial status
 
+    def get_status_data(self):
+        """Returns the current status data dict for initial load/broadcast."""
+        with self.lock:
+            return {
+                "slots_used": self.slots_used,
+                "total_slots": self.total_slots,
+                "processed_count": len(self.processed_packages),
+            }
+    
     def load_packages(self):
         """Load processed packages from file on startup."""
         try:
@@ -88,6 +97,7 @@ class DeliveryHub:
             self.processed_package_ids = set()
 
     def save_packages(self):
+        """Save processed packages in the json file."""
         try:
             with open(PACKAGES_FILE, "w") as f:
                 json.dump(self.processed_packages, f, indent=2)
@@ -224,6 +234,15 @@ class DeliveryHub:
 
 # --- Initialize hub ---
 hub = DeliveryHub(TOTAL_SLOTS)
+@socketio.on('request_initial_data')
+def handle_initial_data_request():
+    """Handles the client request for initial data upon connection."""
+    data = hub.get_status_data()
+    
+    # Emit the data back to the requesting client only
+    socketio.emit('initial_data', data)
+    logging.info("Sent initial status data to a connected client.")
+
 
 # --- Flask routes ---
 @app.route("/")
@@ -271,7 +290,7 @@ def start_modbus_server():
         The Modbus server itself doesn't offer "on_write" hooks easily in this sync context,
         so polling is necessary to react to client writes.
         """
-        seen_requests = set()  # track (robot_id, package_id) already handled
+        seen_requests = set()  # track (robot_id, package_id)
         
         while True:
             try:
@@ -298,7 +317,7 @@ def start_modbus_server():
 
                         # 4. Handle Tracking based on Status
                         if modbus_status_code == 1: # Accepted
-                            # Keep the key until processing completes (done in process_package)
+                            # Keep the key until processing completes
                             seen_requests.add(req_key) 
                         elif modbus_status_code == 2: # Denied/Full
                             pass 
