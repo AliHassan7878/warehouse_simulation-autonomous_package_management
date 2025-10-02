@@ -30,7 +30,7 @@ const RESPONSE_STATUS_ADDR: u16 = 12; // HReg 12: 0=Pending, 1=Accepted, 2=Full,
 
 const MODBUS_TIMEOUT_SECS: u64 = 10;
 const MODBUS_POLL_INTERVAL_MS: u64 = 50;
-const STATUS_POLL_INTERVAL_MS: u64 = 500; // Slower poll for continuous status
+const BROADCAST_INTERVAL_SECS: u64 = 3; //broadcast event every 5 seconds
 
 const DELIVERY_HUB_ADDRESS: &str = "delivery_hub";
 const DELIVERY_HUB_PORT: u16 = 502;
@@ -112,13 +112,16 @@ impl MyDeliveryHub {
 // Continuous Modbus Polling Task for Status Broadcast  (One-to-Many)
 // -----------------------------------------------------
 async fn run_status_monitor(hub: Arc<MyDeliveryHub>) {
-    // State to track previous status
-    let mut last_slots_used: Option<u16> = None;
-    let poll_interval = time::Duration::from_millis(STATUS_POLL_INTERVAL_MS);
+    // State to track previous status (This is now removed/commented out)
+    // let mut last_slots_used: Option<u16> = None; 
+    
+    // Set the continuous broadcast interval to 5 seconds
+    let poll_interval = time::Duration::from_secs(BROADCAST_INTERVAL_SECS);
 
     info!(event="status_monitor_start", "Starting continuous Modbus status monitor.");
 
     loop {
+        // 1. Wait for the 5-second interval
         time::sleep(poll_interval).await;
 
         match read_hub_status().await {
@@ -132,28 +135,23 @@ async fn run_status_monitor(hub: Arc<MyDeliveryHub>) {
                     "SLOTS_FULL" 
                 };
 
-                // Check if the slots_used count has changed since the last poll
-                if last_slots_used.map_or(true, |last| last != slots_used) {
-                    
-                    info!(
-                        event="delivery_hub_status_changed",
-                        slots_used,
-                        total_slots,
-                        state=current_state,
-                        "Broadcasting general hub status change."
-                    );
+                // 2. Broadcast the status every time (The check for 'last_slots_used' is removed)
+                info!(
+                    event="delivery_hub_status_broadcast", // Continuous broadcast
+                    slots_used,
+                    total_slots,
+                    state=current_state,
+                    "Broadcasting general hub status."
+                );
 
-                    // Broadcast the new status to all gRPC subscribers
-                    hub.broadcast_event(
-                        0, // Use 0 for Robot/Package ID to signify a general hub event
-                        0,
-                        current_state,
-                        slots_used as i32,
-                        total_slots as i32
-                    ).await;
+                hub.broadcast_event(
+                    0, // Use 0 for Robot/Package ID to signify a general hub event
+                    0,
+                    current_state,
+                    slots_used as i32,
+                    total_slots as i32
+                ).await;
 
-                    last_slots_used = Some(slots_used);
-                }
             },
             Err(e) => {
                 error!(event="delivery_hub_status_error", error=?e, "Failed to read hub status from Modbus.");
