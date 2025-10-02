@@ -296,14 +296,14 @@ async fn read_hub_status() -> Result<Vec<u16>, Box<dyn std::error::Error + Send 
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // --- Logging Setup START ---
     
-    const LOG_DIR: &str = "logs"; // Directory as requested
+    const LOG_DIR: &str = "logs";
     
     // The function creates all necessary parent directories.
     fs::create_dir_all(LOG_DIR)
         .map_err(|e| format!("Failed to create log directory {}: {}", LOG_DIR, e))?;
     
     // Configure the file appender
-    let file_appender = tracing_appender::rolling::daily(LOG_DIR, "delivery_hub.log");
+    let file_appender = tracing_appender::rolling::daily(LOG_DIR, "communication_hub.log");
     let (non_blocking_appender, _guard) = tracing_appender::non_blocking(file_appender);
 
     // Set up the tracing subscriber to write to the file
