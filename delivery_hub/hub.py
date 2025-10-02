@@ -255,7 +255,7 @@ def index():
         packages = []
 
     total_packages = len(packages)
-    return render_template("hub.html", total_packages=total_packages)
+    return render_template("index.html", total_packages=total_packages)
 
 
 @app.route("/processed_packages")
