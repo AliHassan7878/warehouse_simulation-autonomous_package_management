@@ -34,7 +34,7 @@ if not os.path.isfile(PACKAGES_FILE):
 
 print(f"packages.json created at: {PACKAGES_FILE}")
 
-TOTAL_SLOTS = 1 # Total delivery slots in hub
+TOTAL_SLOTS = 4 # Total delivery slots in hub
 
 # --- Logging setup ---
 class LiveLogHandler(logging.Handler):
@@ -45,13 +45,22 @@ class LiveLogHandler(logging.Handler):
         except Exception:
             pass
 
+# --- Logging setup ---
+
+# ... (LiveLogHandler class definition) ...
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(threadName)s - %(message)s")
+
+# Console Handler
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
-logger.addHandler(LiveLogHandler())
+
+# SocketIO/Live Log Handler
+live_log_handler = LiveLogHandler()
+live_log_handler.setFormatter(formatter) # Sets the formatter
+logger.addHandler(live_log_handler)
 
 # --- Delivery Hub ---
 class DeliveryHub:
@@ -67,6 +76,15 @@ class DeliveryHub:
         logging.info("Delivery Hub initialized with %d slots", total_slots)
         self.emit_slot_status() # Emit initial status
 
+    def get_status_data(self):
+        """Returns the current status data dict for initial load/broadcast."""
+        with self.lock:
+            return {
+                "slots_used": self.slots_used,
+                "total_slots": self.total_slots,
+                "processed_count": len(self.processed_packages),
+            }
+    
     def load_packages(self):
         """Load processed packages from file on startup."""
         try:
@@ -79,6 +97,7 @@ class DeliveryHub:
             self.processed_package_ids = set()
 
     def save_packages(self):
+        """Save processed packages in the json file."""
         try:
             with open(PACKAGES_FILE, "w") as f:
                 json.dump(self.processed_packages, f, indent=2)
@@ -108,10 +127,6 @@ class DeliveryHub:
         2: Full (denied)
         """
         with self.lock:
-            if package_id in self.processed_package_ids:
-                logging.info(f"Package {package_id} already processed, returning ACCEPTED (1).")
-                return 1 # Treat already processed as success for robot state
-
             if self.slots_used < self.total_slots:
                 self.slots_used += 1
 
@@ -122,8 +137,6 @@ class DeliveryHub:
                 
                 # Start background task for simulated processing
                 self.socketio.start_background_task(self.process_package, robot_id, package_id)
-
-                self.update_modbus_status_registers()
 
                 self.emit_hub_event({
                     "event": "accepted",
@@ -139,8 +152,6 @@ class DeliveryHub:
             if self.slots_used == self.total_slots:
                 logging.info(f"No free slots for package {package_id} from Robot {robot_id}. DENIED (2).")
                 
-                self.update_modbus_status_registers()
-                
                 self.emit_hub_event({
                     "event": "full",
                     "robot_id": robot_id,
@@ -151,21 +162,6 @@ class DeliveryHub:
                 # Emit slot status (will be NO_FREE_SLOTS)
                 self.emit_slot_status() 
                 return 2 # Modbus Status: NO_FREE_SLOTS/Denied
-            else:
-                logging.info(f"No free slots for package {package_id} from Robot {robot_id}. DENIED (2).")
-                
-                self.update_modbus_status_registers()
-                
-                self.emit_hub_event({
-                    "event": "full",
-                    "robot_id": robot_id,
-                    "package_id": package_id,
-                    "slots_used": self.slots_used,
-                    "total_slots": self.total_slots,
-                })
-                # Emit slot status (Slot Available)
-                self.emit_slot_status() 
-                return 3 # Modbus Status: Slots Available
 
     def process_package(self, robot_id, package_id):
         """Simulate actual package processing."""
@@ -218,11 +214,13 @@ class DeliveryHub:
         """Send real-time events to UI (used for ACCEPTED, FULL, SLOT_FREED)."""
         try:
             self.socketio.emit("hub_event", payload)
+            self.update_modbus_status_registers()
         except Exception as e:
             logging.debug(f"emit_hub_event failed: {e}")
 
     def update_modbus_status_registers(self):
         """Write current slots_used and total_slots to Modbus HRegs 0 and 1."""
+        logging.debug(f"Modbus status registers update received")
         try:
             if self.context is not None:
                 # Write slots_used to HReg 0, total_slots to HReg 1
@@ -236,6 +234,15 @@ class DeliveryHub:
 
 # --- Initialize hub ---
 hub = DeliveryHub(TOTAL_SLOTS)
+@socketio.on('request_initial_data')
+def handle_initial_data_request():
+    """Handles the client request for initial data upon connection."""
+    data = hub.get_status_data()
+    
+    # Emit the data back to the requesting client only
+    socketio.emit('initial_data', data)
+    logging.info("Sent initial status data to a connected client.")
+
 
 # --- Flask routes ---
 @app.route("/")
@@ -248,7 +255,7 @@ def index():
         packages = []
 
     total_packages = len(packages)
-    return render_template("hub.html", total_packages=total_packages)
+    return render_template("index.html", total_packages=total_packages)
 
 
 @app.route("/processed_packages")
@@ -283,7 +290,7 @@ def start_modbus_server():
         The Modbus server itself doesn't offer "on_write" hooks easily in this sync context,
         so polling is necessary to react to client writes.
         """
-        seen_requests = set()  # track (robot_id, package_id) already handled
+        seen_requests = set()  # track (robot_id, package_id)
         
         while True:
             try:
@@ -308,7 +315,12 @@ def start_modbus_server():
                         context[0].setValues(3, RESPONSE_STATUS_ADDR, [modbus_status_code])
                         logging.info(f"Modbus Response: Wrote status {modbus_status_code} to Register 12.")
 
-                        seen_requests.add(req_key) 
+                        # 4. Handle Tracking based on Status
+                        if modbus_status_code == 1: # Accepted
+                            # Keep the key until processing completes
+                            seen_requests.add(req_key) 
+                        elif modbus_status_code == 2: # Denied/Full
+                            pass 
                         
                 # 4. Clear Status Register (12) when the request registers are clear, 
                 # to reset the hub state for the next Modbus transaction.

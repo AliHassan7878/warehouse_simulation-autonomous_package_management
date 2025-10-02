@@ -1,8 +1,6 @@
-Flask
-Flask-SocketIO
-eventlet
+Flask==3.1.2
+Flask-SocketIO==5.5.1
+eventlet==0.40.3
 pymodbus==2.5.3
-pyserial-asyncio
-grpcio
-grpcio-tools
-modbus-tk
+pyserial-asyncio==0.6
+modbus-tk==1.1.5

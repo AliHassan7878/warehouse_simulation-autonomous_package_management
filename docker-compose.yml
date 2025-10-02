@@ -37,6 +37,8 @@ services:
     container_name: communication_hub
     ports:
       - "50051:50051"  # gRPC port for Robot Simulation
+    volumes:
+      - ./communication_hub/logs:/app/logs
     depends_on:
       - delivery_hub
     networks:
