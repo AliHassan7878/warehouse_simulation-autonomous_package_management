@@ -2,46 +2,69 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Robot Delivery Simulation</title>
+  <title>Warehouse Robot Simulation (Package Delivery)</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <h2>Robot Delivery Simulation — Point A → Point B</h2>
+  <h2>Warehouse Robot Simulation (Package Delivery)</h2>
+  
   <div class="container">
+    
     <div class="col">
+      
       <div class="panel">
         <div class="toprow">
           <span class="point-label">Point A (Pickup)</span>
-          <span class="point-label">Point B (Delivery Hub)</span>
+          <span class="point-label" style="background: #2ecc71; color: white;">Point B (Delivery Hub)</span>
         </div>
         <div class="paths" id="paths"></div>
       </div>
+      
+      <div class="panel">
+        <h3>Live Robot App Logs</h3>
+        <div id="robot_live_logs_area"></div>
+      </div>
+      
     </div>
 
     <div class="col">
+      
       <div class="panel">
-        <h3>Packages</h3>
-        <div class="info">Total packages: <strong id="packages">0</strong></div>
-        <div class="controls">
-          <button id="btnAddPackage">+ Add package</button>
-          <button id="btnRemovePackage">- Remove package</button>
+        <h3>Simulation Controls</h3>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-value" id="total_packages">0</div>
+            <div class="kpi-label">Total Waiting Packages</div>
+            <div class="controls">
+              <button id="btnAddPackage">+ Add package</button>
+              <button id="btnRemovePackage" style="background:#f39c12;">- Remove package</button>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-value" id="total_robots">0</div>
+            <div class="kpi-label">Total Robots</div>
+            <div class="controls">
+              <button id="btnAddRobot">+ Add robot</button>
+              <button id="btnRemoveRobot" style="background:#f39c12;">- Remove robot</button>
+            </div>
+          </div>
         </div>
       </div>
-
+      
       <div class="panel">
-        <h3>Robots (Parked near Point A)</h3>
-        <div class="robot-pool" id="robot_pool"></div>
-        <div class="controls" style="margin-top:10px;">
-          <button id="btnAddRobot">+ Add robot</button>
-          <button id="btnRemoveRobot">- Remove robot</button>
-        </div>
+        <h3>Robots (Available at Point A)</h3>
+        <div class="robot-pool" id="robot_pool">
+          </div>
       </div>
 
       <div class="panel">
         <h3>Live Robot Status</h3>
-        <div id="robot_status_area"></div>
+        <div id="robot_status_area">
+          </div>
       </div>
-    </div>
+      
+      </div>
   </div>
 
 <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
