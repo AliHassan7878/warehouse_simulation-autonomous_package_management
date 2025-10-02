@@ -12,7 +12,7 @@ const totalRobotsEl = document.getElementById('total_robots');
 const pathsEl = document.getElementById('paths');
 const poolEl = document.getElementById('robot_pool');
 const statusAreaEl = document.getElementById('robot_status_area');
-const logsAreaEl = document.getElementById('robot_live_logs_area'); // 🚀 NEW 🚀
+const logsAreaEl = document.getElementById('robot_live_logs_area');
 
 // ...
 
