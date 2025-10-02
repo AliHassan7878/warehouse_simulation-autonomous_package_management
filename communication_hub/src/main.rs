@@ -14,7 +14,9 @@ use std::net::ToSocketAddrs;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use futures_util::StreamExt;
-use futures_util::stream::BoxStream;             
+use futures_util::stream::BoxStream;
+use std::fs;
+use std::path::Path;    
 
 pub mod delivery {
     tonic::include_proto!("delivery");
@@ -68,12 +70,12 @@ impl MyDeliveryHub {
         
         let mut ctx: tokio_modbus::client::Context = tcp::connect(socket_addr).await?;
 
-        // 1. Write Request
+        // Write Request
         ctx.write_multiple_registers(REQUEST_START_ADDR, &vec![robot_id, package_id]).await?;
         
         info!(event = "modbus_write_success", robot_id, package_id, "Wrote request to Modbus registers.");
 
-        // 2. Poll for Status Response
+        // Poll for Status Response
         let poll_interval = time::Duration::from_millis(MODBUS_POLL_INTERVAL_MS);
         let timeout_duration = time::Duration::from_secs(MODBUS_TIMEOUT_SECS);
 
@@ -108,20 +110,18 @@ impl MyDeliveryHub {
     }
 }
 
-// -----------------------------------------------------
+
 // Continuous Modbus Polling Task for Status Broadcast  (One-to-Many)
-// -----------------------------------------------------
+
 async fn run_status_monitor(hub: Arc<MyDeliveryHub>) {
-    // State to track previous status (This is now removed/commented out)
-    // let mut last_slots_used: Option<u16> = None; 
-    
+    // State to track previous status
     // Set the continuous broadcast interval to 5 seconds
     let poll_interval = time::Duration::from_secs(BROADCAST_INTERVAL_SECS);
 
     info!(event="status_monitor_start", "Starting continuous Modbus status monitor.");
 
     loop {
-        // 1. Wait for the 5-second interval
+        // Wait for the 5-second interval
         time::sleep(poll_interval).await;
 
         match read_hub_status().await {
@@ -135,9 +135,9 @@ async fn run_status_monitor(hub: Arc<MyDeliveryHub>) {
                     "SLOTS_FULL" 
                 };
 
-                // 2. Broadcast the status every time (The check for 'last_slots_used' is removed)
+                // Broadcast the status every time
                 info!(
-                    event="delivery_hub_status_broadcast", // Continuous broadcast
+                    event="delivery_hub_status_broadcast",
                     slots_used,
                     total_slots,
                     state=current_state,
@@ -160,9 +160,8 @@ async fn run_status_monitor(hub: Arc<MyDeliveryHub>) {
     }
 }
 
-// -------------------------------------------------------------
+
 // Implementation of DeliveryHub for the Arc<MyDeliveryHub> wrapper
-// -------------------------------------------------------------
 #[async_trait]
 impl DeliveryHub for Arc<MyDeliveryHub> {
     type SubscribeEventsStream = BoxStream<'static, Result<HubEvent, Status>>;
@@ -183,12 +182,9 @@ impl DeliveryHub for Arc<MyDeliveryHub> {
         (**self).subscribe_events(request).await
     }
 }
-// -------------------------------------------------------------
 
 
-// ------------------------------------------------
 // Implementation of DeliveryHub for MyDeliveryHub
-// ------------------------------------------------
 #[async_trait]
 impl DeliveryHub for MyDeliveryHub {
     type SubscribeEventsStream = BoxStream<'static, Result<HubEvent, Status>>;
@@ -295,9 +291,34 @@ async fn read_hub_status() -> Result<Vec<u16>, Box<dyn std::error::Error + Send 
     Ok(response)
 }
 
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    tracing_subscriber::fmt().with_env_filter("info").init();
+    // --- Logging Setup START ---
+    
+    const LOG_DIR: &str = "logs"; // Directory as requested
+    
+    // The function creates all necessary parent directories.
+    fs::create_dir_all(LOG_DIR)
+        .map_err(|e| format!("Failed to create log directory {}: {}", LOG_DIR, e))?;
+    
+    // Configure the file appender
+    let file_appender = tracing_appender::rolling::daily(LOG_DIR, "delivery_hub.log");
+    let (non_blocking_appender, _guard) = tracing_appender::non_blocking(file_appender);
+
+    // Set up the tracing subscriber to write to the file
+    let subscriber = tracing_subscriber::fmt()
+        .with_env_filter("info")
+        // Set the log format to include time, level, target, and message
+        .with_line_number(true)
+        .with_file(true)
+        .with_writer(non_blocking_appender)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("setting default subscriber failed");
+        
+    // --- Logging Setup END ---
 
     info!(service="communication_hub", event="startup", "Communication Hub is starting...");
 
