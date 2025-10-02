@@ -32,5 +32,4 @@ COPY . .
 # --- Expose Flask port ---
 EXPOSE 5000
 
-# --- Run the app ---
-CMD ["python",  "-u", "app.py"]
+CMD bash -c "python -u external_hub_listener.py & python -u app.py" 
