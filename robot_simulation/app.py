@@ -316,8 +316,7 @@ class RobotSimulation:
                 f"Robot {r['id']} assigned package {pkg_id} on path {r['path']} "
                 f"(speed={r['speed']:.2f}m/s)"
             )
-            # Wait 2 seconds to pick up the package
-            eventlet.sleep(2)
+
             logging.info(f"Robot {r['id']} moving to point A for package pick-up")
             self.emit_state()
 
