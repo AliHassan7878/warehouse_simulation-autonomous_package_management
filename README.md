@@ -13,6 +13,9 @@ The project simulates a **Warehouse Robot Delivery System** consisting of three 
 
 All services are containerized with **Docker** and orchestrated with **Docker Compose**.
 
+### Project Structure
+
+Robot simulation <--------> (gRPC) Communication Hub <--------> (ModBus) Delivery Hub
 
 ---
 
@@ -32,10 +35,6 @@ If you don’t have Docker or Docker Compose installed, the provided script (`bu
 Verify all commands, paths, and configurations to ensure they are safe for your environment.
 
 ---
-### Project Structure
-
-Robot simulation <--------> (gRPC) Communication Hub <--------> (ModBus) Delivery Hub
-
 
 ###  Build the Project
 
