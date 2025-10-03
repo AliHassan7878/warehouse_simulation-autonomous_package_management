@@ -16,7 +16,7 @@ All services are containerized with **Docker** and orchestrated with **Docker Co
 
 ---
 
-## ⚙️ Prerequisites
+### Prerequisites
 
 - [Git](https://git-scm.com/)  
 - [Docker](https://docs.docker.com/get-docker/)  
@@ -26,14 +26,18 @@ If you don’t have Docker or Docker Compose installed, the provided script (`bu
 
 ---
 
-## 🚨 Important Note Before Running Shell Scripts
+### Important Note Before Running Shell Scripts
 
 ***⚠️ WARNING:*** Please ***open and read each shell script (`build.sh`, `simulation.sh`, etc.) before executing them***.  
 Verify all commands, paths, and configurations to ensure they are safe for your environment.
 
 ---
+### Project Structure
 
-### 🛠️ Build the Project
+Robot simulation <--------> (gRPC) Communication Hub <--------> (ModBus) Delivery Hub
+
+
+###  Build the Project
 
 Run the provided build script:
 
