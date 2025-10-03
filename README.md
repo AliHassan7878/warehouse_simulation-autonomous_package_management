@@ -68,7 +68,7 @@ Run the provided build script:
 
 ---
 
-### 🌐 Accessing the Services
+### Accessing the Services
 
 Robot Simulation UI → http://localhost:5000
 
@@ -78,7 +78,7 @@ Communication Hub → Runs as a backend service (no direct UI).
 
 ---
 
-### 🧪 Development
+### Development
 
 Modify hub.py (Delivery Hub) or app.py (Robot Simulation) or main.rs → rebuild containers:
 
