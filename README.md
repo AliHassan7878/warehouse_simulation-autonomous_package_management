@@ -16,7 +16,7 @@ The project simulates a distributed warehouse robot delivery workflow consisting
 - **Communication Hub (Rust)**  
   Handles communication between nodes using gRPC and Modbus TCP Slave.
 
-- **Delivery Station (Python/Flask)**  
+- **Delivery Hub (Python/Flask)**  
   Central coordination service managing message queues, delivery slots, and real-time status updates.
 
 All services are containerized using **Docker** and orchestrated with **Docker Compose**.
@@ -25,7 +25,7 @@ All services are containerized using **Docker** and orchestrated with **Docker C
 
 ### 🧱 Architecture
 
-Robot simulation <--------> (gRPC) Communication Hub <--------> (ModBus) Delivery Station
+Robot simulation <--------> (gRPC) Communication Hub <--------> (ModBus) Delivery Hub
 
 ---
 
