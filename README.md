@@ -100,6 +100,7 @@ Communication Hub → Runs as a backend service (no direct UI).
 
 - Modular design for easy extension and experimentation
 
+---
 
 ### Development
 
