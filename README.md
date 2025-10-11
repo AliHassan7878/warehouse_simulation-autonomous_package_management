@@ -1,21 +1,31 @@
-# warehouse_robot_simulation
+# Warehouse Robot Simulation
 
-The project simulates a **Warehouse Robot Delivery System** consisting of three main services:
+A modular simulation demonstrating a **Warehouse Robot Delivery System** built with a microservices architecture.  
+Robots, hubs, and communication nodes interact through **gRPC** and **Modbus** protocols within containerized environments.
 
-- **Communication Hub (Rust)**  
-  Handles communication between nodes using gRPC and Modbus.
+---
 
-- **Delivery Hub (Python/Flask)**  
-  Central hub managing message queues, delivery slots, and real-time status.
+
+### 🧩 Overview
+
+The project simulates a distributed warehouse robot delivery workflow consisting of three main services:
 
 - **Robot Simulation (Python/Flask)**  
-  Simulates robot movement, package handling, and visualization.
+  Simulates robot movement, package handling, and visualization through a web interface.
 
-All services are containerized with **Docker** and orchestrated with **Docker Compose**.
+- **Communication Hub (Rust)**  
+  Handles communication between nodes using gRPC and Modbus TCP Slave.
 
-### Project Structure
+- **Delivery Station (Python/Flask)**  
+  Central coordination service managing message queues, delivery slots, and real-time status updates.
 
-Robot simulation <--------> (gRPC) Communication Hub <--------> (ModBus) Delivery Hub
+All services are containerized using **Docker** and orchestrated with **Docker Compose**.
+
+---
+
+### 🧱 Architecture
+
+Robot simulation <--------> (gRPC) Communication Hub <--------> (ModBus) Delivery Station
 
 ---
 
@@ -78,14 +88,39 @@ Communication Hub → Runs as a backend service (no direct UI).
 
 ---
 
+### 🧠 Features
+
+- Simulated robot delivery system with visual interface
+
+- Message-based communication using gRPC and Modbus
+
+- Central delivery coordination hub
+
+- Fully containerized and orchestrated with Docker Compose
+
+- Modular design for easy extension and experimentation
+
+
 ### Development
 
 Modify hub.py (Delivery Hub) or app.py (Robot Simulation) or main.rs → rebuild containers:
 
 ```bash
 ./build.sh
-```
-```
+
 ./simulation.sh restart
 ```
+---
+
+📜 License
+
+This project is released under the MIT License.
+You’re free to use, modify, and distribute it with proper attribution.
+
+---
+
+### 💬 Note
+This project was initially developed as part of a technical evaluation and has been adapted for educational and portfolio purposes.
+All code and architecture are original contributions.
+
 ---
